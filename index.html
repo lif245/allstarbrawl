@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="All Star Battle - Anime Web Battle Game. เกมยิงแนวท็อปดาวน์สไตล์อนิเมะ สนุกสนานระทึกใจ" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>⚔️ All Star Battle</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #0a0a0f;
+      overflow: hidden;
+      font-family: 'Noto Sans Thai', 'Orbitron', sans-serif;
+    }
+
+    #game-canvas {
+      display: block;
+    }
+
+    /* Loading Screen Overlay */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 40%, #0d1a3f 70%, #0a0a0f 100%);
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Starfield background */
+    .stars-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+      animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* Title */
+    .loading-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(2rem, 6vw, 4rem);
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: transparent;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa, #a78bfa);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: shimmer 2.5s linear infinite, fadeInDown 0.8s ease forwards;
+      text-shadow: none;
+      filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.8));
+      position: relative;
+      z-index: 1;
+      margin-bottom: 8px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loading-subtitle {
+      font-family: 'Noto Sans Thai', sans-serif;
+      font-size: clamp(0.9rem, 2vw, 1.2rem);
+      color: #a78bfa;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 60px;
+      opacity: 0;
+      animation: fadeInDown 0.8s ease 0.3s forwards;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Spinner */
+    .spinner-container {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.8s ease 0.5s both;
+    }
+
+    .spinner-ring {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .spinner-ring:nth-child(1) {
+      width: 80px;
+      height: 80px;
+      border: 3px solid transparent;
+      border-top-color: #8b5cf6;
+      animation: spin 1.2s linear infinite;
+    }
+
+    .spinner-ring:nth-child(2) {
+      width: 60px;
+      height: 60px;
+      border: 3px solid transparent;
+      border-top-color: #60a5fa;
+      animation: spin 0.9s linear infinite reverse;
+    }
+
+    .spinner-ring:nth-child(3) {
+      width: 40px;
+      height: 40px;
+      border: 3px solid transparent;
+      border-top-color: #a78bfa;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .spinner-core {
+      width: 14px;
+      height: 14px;
+      background: radial-gradient(circle, #fff 0%, #8b5cf6 100%);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px #8b5cf6, 0 0 30px #8b5cf6;
+      animation: pulse-core 1s ease-in-out infinite;
+    }
+
+    .spinner-wrapper {
+      width: 90px;
+      height: 90px;
+      position: relative;
+    }
+
+    @keyframes spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes pulse-core {
+      0%, 100% { box-shadow: 0 0 15px #8b5cf6, 0 0 30px #8b5cf6; }
+      50% { box-shadow: 0 0 25px #a78bfa, 0 0 50px #a78bfa; }
+    }
+
+    /* Progress bar */
+    .progress-container {
+      width: min(400px, 80vw);
+      position: relative;
+      z-index: 1;
+      animation: fadeInDown 0.8s ease 0.7s both;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: #6d7fd4;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(139, 92, 246, 0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #60a5fa);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
+      animation: load-progress 2.5s ease forwards 1s;
+    }
+
+    @keyframes load-progress {
+      0%   { width: 0%; }
+      30%  { width: 35%; }
+      60%  { width: 70%; }
+      85%  { width: 90%; }
+      100% { width: 100%; }
+    }
+
+    /* Decorative lines */
+    .deco-line {
+      position: absolute;
+      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+      height: 1px;
+      width: 60%;
+      left: 20%;
+    }
+    .deco-line.top { top: 30%; }
+    .deco-line.bottom { bottom: 30%; }
+
+    /* Corner decorations */
+    .corner {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-color: rgba(139, 92, 246, 0.4);
+      border-style: solid;
+    }
+    .corner.tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+    .corner.tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+    .corner.bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+    .corner.br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+  </style>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <!-- Stars background -->
+    <div class="stars-bg" id="stars-bg"></div>
+
+    <!-- Corner decorations -->
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- Decorative lines -->
+    <div class="deco-line top"></div>
+    <div class="deco-line bottom"></div>
+
+    <!-- Title -->
+    <h1 class="loading-title">⚔️ ALL STAR BATTLE</h1>
+    <p class="loading-subtitle">Anime Web Battle Game</p>
+
+    <!-- Spinner -->
+    <div class="spinner-container">
+      <div class="spinner-wrapper">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-core"></div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-container">
+      <div class="progress-label">
+        <span>กำลังโหลด...</span>
+        <span id="load-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Canvas Container -->
+  <div id="game-canvas"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="/src/main.js"></script>
+  <script>
+    // Generate stars
+    const starsContainer = document.getElementById('stars-bg')
+    for (let i = 0; i < 120; i++) {
+      const star = document.createElement('div')
+      star.classList.add('star')
+      const size = Math.random() * 3 + 1
+      star.style.cssText = `
+        width: ${size}px;
+        height: ${size}px;
+        top: ${Math.random() * 100}%;
+        left: ${Math.random() * 100}%;
+        --dur: ${Math.random() * 4 + 2}s;
+        --delay: ${Math.random() * 4}s;
+        opacity: ${Math.random() * 0.6 + 0.2};
+      `
+      starsContainer.appendChild(star)
+    }
+
+    // Simulated loading progress text sync
+    const fill = document.getElementById('progress-fill')
+    const pct = document.getElementById('load-pct')
+    const observer = new MutationObserver(() => {
+      const w = parseFloat(fill.style.width) || 0
+      pct.textContent = Math.round(w) + '%'
+    })
+    observer.observe(fill, { attributes: true, attributeFilter: ['style'] })
+
+    // Hide overlay once Phaser is ready (listen for custom event)
+    window.addEventListener('game-ready', () => {
+      setTimeout(() => {
+        document.getElementById('loading-overlay').classList.add('hidden')
+        observer.disconnect()
+      }, 500)
+    })
+
+    // Fallback hide after 4 seconds
+    setTimeout(() => {
+      document.getElementById('loading-overlay').classList.add('hidden')
+    }, 4000)
+  </script>
+</body>
+</html>
